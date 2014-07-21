@@ -6,9 +6,9 @@ local utility = require('utility')
 local network = {}
 
 local format = "%s%d ms"
-local hosts = { "github.com", "195.24.232.203", "128.39.32.2" }
+local hosts = { "google.com.au", "74.125.237.143" }
 local short_labels = { "", "^DNS: ", "L: " }
-local labels = { "World", "W/o DNS", "Local" }
+local labels = { "World", "W/o DNS" }
 local tooltip = {
    title = "Network\t\tLatency\t\tLoss",
    timeout = 0,
