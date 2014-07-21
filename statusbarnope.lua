@@ -4,16 +4,16 @@ local wibox = require('wibox')
 local topjets = require('topjets')
 local beautiful = require('beautiful')
 local awesompd = require('awesompd/awesompd')
+local picturesque = require('picturesque')
 local iconic = require('iconic')
-local vicious = require("vicious")
+local orglendar = require('orglendar')
 
 local statusbar = { widgets = {}, wiboxes = {} }
 local widgets = statusbar.widgets
 
 local mouse = { LEFT = 1, MIDDLE = 2, RIGHT = 3, WHEEL_UP = 4, WHEEL_DOWN = 5 }
 
-statusbar.position = "top"
-wb = nil
+statusbar.position = "right"
 
 local function keymap(...)
    local t = {}
@@ -29,6 +29,11 @@ local function keymap(...)
    return t
 end
 
+local function constrain(widget, size)
+   return wibox.layout.constraint(widget, 'exact', size, size)
+end
+
+local margin = wibox.layout.margin
 
 function statusbar.create(s)
    if not statusbar.initialized then
@@ -37,126 +42,114 @@ function statusbar.create(s)
    local l
    local w = widgets
    local I = widgets.separator
+   local O = widgets.separator2
 
-   l = { left = { w.menu_icon, I, w.tags[s], I, w.prompt[s] },
-         middle = w.programs[s],
-         right = { I,w.systray, I,
-         w.mpd.layout, 
-         w.arrl_ld, w.kbd, w.arrl_dl, 
-         w.net,I, 
-         w.arrl_ld,w.cpu,w.mem,  w.arrl_dl, 
-         I, w.vol, I,
-         w.battery, I,
-         w.arrl_ld, w.time }
+   local sound_and_music = wibox.layout.flex.horizontal()
+   sound_and_music:add(w.vol)
+   sound_and_music:add(w.mpd.widget)
+
+   local mem = wibox.layout.flex.horizontal()
+   mem:add(w.mem)
+
+   local ttime = wibox.layout.align.horizontal()
+   ttime:set_middle(w.time)
+   orglendar.register(w.time)
+
+   local cpu_and_net = wibox.layout.flex.horizontal()
+   cpu_and_net:add(w.cpu)
+   cpu_and_net:add(w.net)
+
+   local menu_centered = wibox.layout.align.horizontal()
+   menu_centered:set_middle(wibox.layout.constraint(w.menu_icon, 'exact', 32, 32))
+
+   local unitybar = topjets.unitybar({ screen = s,
+                                       width = 58,
+                                       fg_normal = "#888888",
+                                       bg_urgent = "#ff000088",
+                                       img_focused = beautiful.taglist_bg_focus,
+                                     })
+
+   l = { top = { O, menu_centered, w.prompt[s], O },
+         middle = unitybar,
+         bottom = { w.weather,
+                    w.net,
+                    w.cpu,
+                    sound_and_music,
+                    mem,
+                    ttime
+         }
    }
 
-   wb = awful.wibox({ position = statusbar.position, screen = s , height = beautiful.menu_height })
+   local wb = awful.wibox({ position = statusbar.position, screen = s, width = 58 })
 
-   -- Widgets that are aligned to the left
-   local left_layout = wibox.layout.fixed.horizontal()
-   for _, v in ipairs(l.left) do
-      left_layout:add(v)
+   -- Widgets that are aligned to the top
+   local top_layout = wibox.layout.fixed.vertical()
+   for _, v in ipairs(l.top) do
+      top_layout:add(v)
    end
 
-   -- Widgets that are aligned to the right
-   local right_layout = wibox.layout.fixed.horizontal()
-   for _, v in ipairs(l.right) do
-      right_layout:add(v)
+   -- Widgets that are aligned to the bottom
+   local bottom_layout = wibox.layout.fixed.vertical()
+   for _, v in ipairs(l.bottom) do
+      bottom_layout:add(wibox.layout.margin(v, 5, 5, 5, 5))
    end
 
    -- Now bring it all together (with the tasklist in the middle)
-   local layout = wibox.layout.align.horizontal()
-   layout:set_left(left_layout)
+   local layout = wibox.layout.align.vertical()
+   layout:set_top(top_layout)
    layout:set_middle(l.middle)
-   layout:set_right(right_layout)
+   layout:set_bottom(bottom_layout)
 
    wb:set_widget(layout)
    statusbar.wiboxes[s] = wb
    return wb
 end
 
-function statusbar.redraw(color)
-  wb:set_bg(color)
-end
-
-
-
 function statusbar.initialize()
    -- Menu
    local mainmenu = { items = {
-                                  { 'awesome', { 
-                                                  { "restart", awesome.restart  },
-                                                  { "quit",    awesome.quit, beautiful.awesome_icon     } 
-                                               },
-                                  beautiful.awesome_icon
-                                  },
-                                  { "system",  	{ 
-                                                  { "reboot",   function() awful.util.spawn("reboot")  end },
-                                                  { "shutdown", function() awful.util.spawn("shutdown")  end }
-                                                },
-                                  beautiful.awesome_icon 
-                                  } 
-                              },
-                      theme = { width = beautiful.menu_width } 
-                    }
+                         { 'awesome', { { "change wallpaper", picturesque.change_image },
+                                        { "restart", awesome.restart },
+                                        { "quit", awesome.quit } },
+                           beautiful.awesome_icon},
+                         { "connect to", { } } },
+                      theme = { width = 150 } }
 
    widgets.menu_icon = awful.widget.launcher(
-      { image = iconic.lookup_icon("start-here-arch3", { preferred_size = "16x16",
-                                                         icon_types = { "/start-here/" }}),
+      { image = (awful.util.getdir("config") .. "/res/start-here-arch3.png"),
         menu = awful.menu(mainmenu) })
 
    widgets.separator = wibox.widget.textbox()
-   widgets.separator:set_markup(" ")
+   widgets.separator:set_markup("   ")
 
+   widgets.separator2 = wibox.widget.textbox()
+   widgets.separator2:set_markup(" ")
 
-   -- Separators
-widgets.arrl = wibox.widget.imagebox()
-widgets.arrl:set_image(beautiful.arrl)
-widgets.arrl_dl = wibox.widget.imagebox()
-widgets.arrl_dl:set_image(beautiful.arrl_dl)
-widgets.arrl_ld = wibox.widget.imagebox()
-widgets.arrl_ld:set_image(beautiful.arrl_ld)
-   
-
---Systray
-widgets.systray = wibox.widget.systray()
-
---Vicious widget
---Initialize widget
---Initialize widget
---widgets.cpuw = wibox.widget.textbox()
--- Register widget
---vicious.register(widgets.cpuw, vicious.widgets.cpu, "$1%")
-
-
-  -- Clock widget
-  time = topjets.time();
-  widgets.time = wibox.widget.background(time, "#313131")
+   -- Clock widget
+   widgets.time = wibox.widget.textbox()
+   scheduler.register_recurring("topjets.clock", 30,
+                                function()
+                                   widgets.time:set_markup(os.date("%a %d\n %H:%M"))
+                                end)
 
    -- CPU widget
-   cpu = topjets.cpu()
-   cpu:buttons(
-      keymap({ mouse.LEFT, function() utility.spawn_in_terminal("htop") end },
-             { mouse.RIGHT, function() cpu.width = 1 end }))
-   widgets.cpu = wibox.widget.background(cpu, "#313131")
-
+   widgets.cpu = topjets.cpu()
+   widgets.cpu:buttons(
+      keymap({ mouse.LEFT, function() utility.spawn_in_terminal("htop") end }))
 
    -- Memory widget
-   memory = topjets.memory()
-     widgets.mem = wibox.widget.background(memory, "#313131")
-
-   -- Battery widget
-   --widgets.battery = topjets.battery()
+   widgets.mem = topjets.memory()
 
    -- Network widget
    widgets.net = topjets.network()
 
-
-   -- Keyboard widget
-   --widgets.kbd = wibox.widget.background(topjets.kbd(), "#313131")
+   -- Weather widget
+   widgets.weather = topjets.weather()
+   widgets.weather:buttons(
+      keymap({ mouse.LEFT, widgets.weather.update}))
 
    -- Volume widget
-   widgets.vol = topjets.volume();
+   widgets.vol = topjets.volume()
    widgets.vol:buttons(
       keymap({ mouse.LEFT, function() widgets.vol:mute() end },
              { mouse.WHEEL_UP, function() widgets.vol:inc() end },
@@ -164,7 +157,11 @@ widgets.systray = wibox.widget.systray()
 
    -- MPD widget
    local mpd = awesompd:create()
+   awesompd.STOPPED = ""
    mpd.font = "Liberation Mono"
+   mpd.backgroud = "#000000"
+   mpd.widget_icon = iconic.lookup_icon("gmpc", { preferred_size = "24x24",
+                                                  icon_types = { "/apps/" }})
    mpd.scrolling = true
    mpd.output_size = 30
    mpd.update_interval = 10
@@ -172,24 +169,25 @@ widgets.systray = wibox.widget.systray()
    mpd.debug_mode = true
    mpd.jamendo_format = awesompd.FORMAT_MP3
    mpd.show_album_cover = true
-   mpd.browser = "firefox"  --software.browser
+   mpd.browser = software.browser
    mpd.mpd_config = userdir .. "/.mpdconf"
    mpd.album_cover_size = 50
    mpd.ldecorator = " "
    mpd.rdecorator = ""
    mpd.servers = { { server = "localhost",
-                    port = 6600 } }
-   mpd:register_buttons({ { "", awesompd.MOUSE_LEFT, mpd:command_toggle() },
-                           { "Control", awesompd.MOUSE_SCROLL_UP, mpd:command_prev_track() },
-                           { "Control", awesompd.MOUSE_SCROLL_DOWN, mpd:command_next_track() },
-                           { "", awesompd.MOUSE_SCROLL_UP, mpd:command_volume_up() },
-                           { "", awesompd.MOUSE_SCROLL_DOWN, mpd:command_volume_down() },
-                           { "", awesompd.MOUSE_RIGHT, mpd:command_show_menu() },
-   --                        { "", "XF86AudioPlay", mpd:command_playpause() },
-   --                        { "", "XF86AudioStop", mpd:command_stop() },
-   --                        { "", "XF86AudioPrev", mpd:command_prev_track() },
-   --                        { "", "XF86AudioNext", mpd:command_next_track() }})
+                     port = 6600 } }
+   mpd:register_buttons({ { "", awesompd.MOUSE_LEFT, mpd:command_playpause() },
+                          { "Control", awesompd.MOUSE_SCROLL_UP, mpd:command_prev_track() },
+                          { "Control", awesompd.MOUSE_SCROLL_DOWN, mpd:command_next_track() },
+                          { "", awesompd.MOUSE_SCROLL_UP, mpd:command_volume_up() },
+                          { "", awesompd.MOUSE_SCROLL_DOWN, mpd:command_volume_down() },
+                          { "", awesompd.MOUSE_RIGHT, mpd:command_show_menu() },
+                          { "", "XF86AudioPlay", mpd:command_playpause() },
+                          { "", "XF86AudioStop", mpd:command_stop() },
+                          { "", "XF86AudioPrev", mpd:command_prev_track() },
+                          { "", "XF86AudioNext", mpd:command_next_track() }})
    mpd:run()
+   mpd:init_onscreen_widget({ x = 20, y = -30, font = "helvetica 11" })
    widgets.mpd = mpd
 
    -- Native widgets
