@@ -20,8 +20,6 @@ local menubar = require("menubar")
 local utility = require("utility")
 -- Dictionary
 local dict = require("dict")
--- Thinkpad specific features
-local thinkpad = require('thinkpad')
 
 local minitray = require('minitray')
 local statusbar = require('statusbar')
@@ -36,7 +34,7 @@ notify_at = utility.notify_at
 
 userdir = utility.pslurp("echo $HOME", "*line")
 
--- Autorun programs
+--[[ Autorun programs
 autorunApps = {
    "setxkbmap -layout 'us,ru' -variant ',winkeys' -option grp:menu_toggle -option compose:ralt -option terminate:ctrl_alt_bksp",
    'sleep 2; xmodmap ~/.xmodmap'
@@ -58,6 +56,18 @@ utility.autorun(autorunApps, runOnceApps)
 
 -- Various initialization
 thinkpad.touchpad.enable(false)
+--]]
+
+--[[ autorunApps = {
+
+}
+--]]
+
+runOnceApps = {
+   'xrandr --size 1280x800',
+}
+
+utility.autorun(autorunApps, runOnceApps)
 
 lustrous.init { lat = private.user.loc.lat,
                 lon = private.user.loc.lon,
@@ -66,7 +76,7 @@ lustrous.init { lat = private.user.loc.lat,
 -- {{{ Variable definitions
 -- Themes define colours, icons, and wallpapers
 beautiful.init(awful.util.getdir("config") .. "/themes/devotion/theme.lua")
-beautiful.onscreen.init()
+bg_focus = beautiful.bg_focus
 
 -- {{{ Wallpaper
 picturesque.sfw = true
@@ -175,14 +185,6 @@ end
 
 -- {{{ Key bindings
 globalkeys = awful.util.table.join(
-   awful.key({                   }, "XF86Launch1", function() utility.spawn_in_terminal("ncmpc") end),
-   awful.key({                   }, "Scroll_Lock", function() utility.spawn_in_terminal("scripts/omniscript") end),
-   awful.key({                   }, "XF86TouchpadToggle", thinkpad.touchpad.toggle),
-   awful.key({                   }, "XF86ScreenSaver", thinkpad.power.screenlock),
-   awful.key({                   }, "XF86Battery", function() utility.spawn_in_terminal("sudo scripts/flashmanager") end),
-   awful.key({                   }, "XF86Display", function() utility.spawn_in_terminal("scripts/switch-display") end),
-   awful.key({                   }, "XF86AudioLowerVolume", function() statusbar.widgets.vol:dec() end),
-   awful.key({                   }, "XF86AudioRaiseVolume", function() statusbar.widgets.vol:inc() end),
    awful.key({ modkey,           }, "l", minitray.toggle ),
    awful.key({ modkey,           }, "p", function() menubar.show() end ),
    awful.key({ modkey,           }, "e",   function()

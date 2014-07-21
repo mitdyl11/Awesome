@@ -48,9 +48,8 @@ function statusbar.create(s)
    sound_and_music:add(w.vol)
    sound_and_music:add(w.mpd.widget)
 
-   local mem_and_bat = wibox.layout.flex.horizontal()
-   mem_and_bat:add(w.mem)
-   mem_and_bat:add(w.battery)
+   local mem = wibox.layout.flex.horizontal()
+   mem:add(w.mem)
 
    local ttime = wibox.layout.align.horizontal()
    ttime:set_middle(w.time)
@@ -117,8 +116,7 @@ function statusbar.initialize()
                       theme = { width = 150 } }
 
    widgets.menu_icon = awful.widget.launcher(
-      { image = iconic.lookup_icon("start-here-arch3", { preferred_size = "128x128",
-                                                         icon_types = { "/start-here/" }}),
+      { image = (awful.util.getdir("config") .. "/res/start-here-arch3.png"),
         menu = awful.menu(mainmenu) })
 
    widgets.separator = wibox.widget.textbox()
@@ -141,9 +139,6 @@ function statusbar.initialize()
 
    -- Memory widget
    widgets.mem = topjets.memory()
-
-   -- Battery widget
-   widgets.battery = topjets.battery()
 
    -- Network widget
    widgets.net = topjets.network()
